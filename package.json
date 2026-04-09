@@ -1,0 +1,9 @@
+{
+  "name": "elasticsearch-seed",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Seed script for Elasticsearch",
+  "dependencies": {
+    "@faker-js/faker": "^8.4.1"
+  }
+}
