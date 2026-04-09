@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Type Ahead Search</title>
+  <style>
+    :root {
+      --bg: #101828;
+      --panel: rgba(17, 24, 39, 0.82);
+      --panel-2: rgba(255, 255, 255, 0.08);
+      --ink: #f9fafb;
+      --muted: #cbd5e1;
+      --accent: #38bdf8;
+      --accent-2: #f59e0b;
+      --line: rgba(255,255,255,0.12);
+      --shadow: 0 24px 60px rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(56,189,248,0.3), transparent 24%),
+        radial-gradient(circle at 80% 0%, rgba(245,158,11,0.22), transparent 28%),
+        linear-gradient(135deg, #0f172a, #111827 45%, #020617);
+      padding: 32px;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+    .hero, .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .hero { padding: 28px; }
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 4vw, 48px);
+      letter-spacing: -0.04em;
+    }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.7; }
+    .panel { padding: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 700; }
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.08);
+      color: var(--ink);
+      border-radius: 16px;
+      padding: 14px 16px;
+      font: inherit;
+      outline: none;
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .status {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .row {
+      display: grid;
+      gap: 4px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.06);
+    }
+    .row strong { font-size: 16px; }
+    .row span, .row small { color: var(--muted); }
+    .badge {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(56,189,248,0.12);
+      color: #7dd3fc;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .topbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .link {
+      color: #7dd3fc;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    @media (max-width: 760px) {
+      body { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Type Ahead</h1>
+      <p>Nhập vài ký tự, trang sẽ gọi Elasticsearch và trả về gợi ý tức thì từ index <strong>products</strong>.</p>
+    </section>
+
+    <section class="panel">
+      <div class="topbar">
+        <div style="flex:1; min-width: 260px;">
+          <label for="endpoint">Elasticsearch endpoint</label>
+          <input id="endpoint" value="http://localhost:9200" />
+        </div>
+        <div style="flex:1; min-width: 260px;">
+          <label for="search">Search</label>
+          <input id="search" placeholder="Ví dụ: ca, tea, cake..." autocomplete="off" />
+        </div>
+      </div>
+      <div class="hint">Gợi ý sẽ tìm theo <code>name</code>, <code>tags</code> và <code>category</code>.</div>
+      <div id="status" class="status">Chưa có truy vấn.</div>
+      <div id="results" class="list"></div>
+    </section>
+  </main>
+
+  <script>
+    const endpointEl = document.getElementById('endpoint');
+    const searchEl = document.getElementById('search');
+    const resultsEl = document.getElementById('results');
+    const statusEl = document.getElementById('status');
+    let timer = null;
+    let controller = null;
+
+    function esc(text) {
+      return String(text).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[ch]));
+    }
+
+    function render(items, q) {
+      if (!items.length) {
+        resultsEl.innerHTML = '<div class="row">Không tìm thấy kết quả phù hợp.</div>';
+        return;
+      }
+
+      resultsEl.innerHTML = items.map(({ _source, _score }) => `
+        <div class="row">
+          <strong>${esc(_source.name)}</strong>
+          <span>${esc(_source.category)} | price: ${_source.price} | stock: ${_source.stock}</span>
+          <small>tags: ${(Array.isArray(_source.tags) ? _source.tags : []).map(esc).join(', ')}</small>
+          <div class="badge">score ${(_score || 0).toFixed(2)} · query "${esc(q)}"</div>
+        </div>
+      `).join('');
+    }
+
+    async function runQuery(q) {
+      const endpoint = endpointEl.value.replace(/\/$/, '');
+      if (controller) controller.abort();
+      controller = new AbortController();
+
+      if (!q) {
+        statusEl.textContent = 'Nhập để tìm kiếm theo thời gian thực.';
+        resultsEl.innerHTML = '';
+        return;
+      }
+
+      statusEl.textContent = `Đang tìm "${q}"...`;
+
+      const body = {
+        size: 7,
+        query: {
+          bool: {
+            should: [
+              { match_phrase_prefix: { name: { query: q, boost: 4 } } },
+              { match: { tags: { query: q, boost: 1.5 } } },
+              { match: { category: { query: q, boost: 0.5 } } }
+            ],
+            minimum_should_match: 1
+          }
+        }
+      };
+
+      try {
+        const res = await fetch(`${endpoint}/products/_search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+        const data = await res.json();
+        const hits = data.hits?.hits || [];
+        statusEl.textContent = `Tìm thấy ${hits.length} kết quả cho "${q}".`;
+        render(hits, q);
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        statusEl.textContent = `Lỗi: ${error.message || error}`;
+        resultsEl.innerHTML = '';
+      }
+    }
+
+    searchEl.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => runQuery(searchEl.value.trim()), 180);
+    });
+  </script>
+</body>
+</html>

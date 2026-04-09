@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Elasticsearch Test</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f2ea;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --accent: #0f766e;
+      --accent-2: #d97706;
+      --line: #e5e7eb;
+      --shadow: 0 16px 40px rgba(31, 41, 55, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(15,118,110,0.14), transparent 30%),
+        radial-gradient(circle at top right, rgba(217,119,6,0.16), transparent 26%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 32px;
+    }
+    .shell {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+    .hero, .card {
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(229,231,235,0.9);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+    .hero { padding: 28px; }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: -0.03em;
+    }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.6; }
+    .card { padding: 20px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+    }
+    label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+    input, button, textarea {
+      width: 100%;
+      font: inherit;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      background: #fff;
+      color: var(--ink);
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), #115e59);
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 10px 18px rgba(15,118,110,0.22);
+    }
+    button.secondary {
+      background: linear-gradient(135deg, var(--accent-2), #b45309);
+      box-shadow: 0 10px 18px rgba(217,119,6,0.22);
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .actions button { width: auto; min-width: 160px; }
+    pre {
+      margin: 0;
+      overflow: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 16px;
+      min-height: 160px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #9ca3af;
+    }
+    .ok .dot { background: #16a34a; }
+    .bad .dot { background: #dc2626; }
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fff;
+    }
+    .item h3 { margin: 0 0 6px; }
+    .meta { color: var(--muted); font-size: 14px; }
+    @media (max-width: 780px) {
+      body { padding: 16px; }
+      .grid { grid-template-columns: 1fr; }
+      .actions button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <h1>Elasticsearch Test</h1>
+      <p>Trang này dùng để kiểm tra kết nối, xem cluster health, và chạy một truy vấn mẫu lên index <strong>products</strong>.</p>
+    </section>
+
+    <section class="card">
+      <div class="grid">
+        <div>
+          <label for="endpoint">Elasticsearch endpoint</label>
+          <input id="endpoint" value="http://localhost:9200" />
+        </div>
+        <div>
+          <label for="query">Từ khóa tìm kiếm</label>
+          <input id="query" value="ca phe" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="pingBtn">Ping cluster</button>
+        <button id="searchBtn" class="secondary">Search products</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div id="status" class="status"><span class="dot"></span><span>Chưa chạy</span></div>
+      <pre id="output">Nhấn "Ping cluster" để kiểm tra Elasticsearch.</pre>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0">Kết quả sản phẩm</h2>
+      <div id="results" class="list"></div>
+    </section>
+  </main>
+
+  <script>
+    const endpointEl = document.getElementById('endpoint');
+    const queryEl = document.getElementById('query');
+    const outputEl = document.getElementById('output');
+    const resultsEl = document.getElementById('results');
+    const statusEl = document.getElementById('status');
+
+    async function readJsonOrThrow(res) {
+      const raw = await res.text();
+      let data;
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = { raw };
+      }
+
+      if (!res.ok) {
+        const msg = data?.error?.reason || data?.error?.type || raw || 'Unknown error';
+        throw new Error(`HTTP ${res.status}: ${msg}`);
+      }
+      return data;
+    }
+
+    function setStatus(state, text) {
+      statusEl.className = `status ${state || ''}`.trim();
+      statusEl.innerHTML = `<span class="dot"></span><span>${text}</span>`;
+    }
+
+    function esc(text) {
+      return String(text).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[ch]));
+    }
+
+    async function pingCluster() {
+      const endpoint = endpointEl.value.replace(/\/$/, '');
+      setStatus('', 'Đang ping cluster...');
+      outputEl.textContent = 'Loading...';
+      resultsEl.innerHTML = '';
+
+      try {
+        const res = await fetch(endpoint, {
+          headers: { Accept: 'application/json' }
+        });
+        const data = await readJsonOrThrow(res);
+        setStatus('ok', `Connected: ${data.cluster_name || 'unknown cluster'}`);
+        outputEl.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        setStatus('bad', 'Không kết nối được');
+        outputEl.textContent = String(error);
+      }
+    }
+
+    async function searchProducts() {
+      const endpoint = endpointEl.value.replace(/\/$/, '');
+      const q = queryEl.value.trim();
+      if (!q) {
+        setStatus('bad', 'Nhập từ khóa trước');
+        return;
+      }
+
+      setStatus('', `Đang tìm "${q}"...`);
+      resultsEl.innerHTML = '';
+
+      const body = {
+        size: 5,
+        query: {
+          bool: {
+            should: [
+              { match_phrase_prefix: { name: { query: q, boost: 4 } } },
+              { match: { tags: { query: q, boost: 1.5 } } },
+              { match: { category: { query: q, boost: 0.5 } } }
+            ],
+            minimum_should_match: 1
+          }
+        }
+      };
+
+      try {
+        const res = await fetch(`${endpoint}/products/_search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await readJsonOrThrow(res);
+        outputEl.textContent = JSON.stringify(data, null, 2);
+        const hits = data.hits?.hits || [];
+        setStatus('ok', `Tìm thấy ${hits.length} kết quả`);
+
+        if (!hits.length) {
+          resultsEl.innerHTML = '<div class="item">Không có kết quả.</div>';
+          return;
+        }
+
+        resultsEl.innerHTML = hits.map(({ _source, _score }) => `
+          <div class="item">
+            <h3>${esc(_source.name)}</h3>
+            <div class="meta">category: ${esc(_source.category)} | price: ${_source.price} | score: ${(_score || 0).toFixed(2)}</div>
+            <div class="meta">tags: ${(Array.isArray(_source.tags) ? _source.tags : []).map(esc).join(', ')}</div>
+          </div>
+        `).join('');
+      } catch (error) {
+        setStatus('bad', 'Search thất bại');
+        outputEl.textContent = String(error);
+      }
+    }
+
+    document.getElementById('pingBtn').addEventListener('click', pingCluster);
+    document.getElementById('searchBtn').addEventListener('click', searchProducts);
+  </script>
+</body>
+</html>

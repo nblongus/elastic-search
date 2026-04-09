@@ -1,0 +1,20 @@
+{"index":{"_index":"products","_id":"1"}}
+{"name":"Ca phe sua da","category":"drink","price":29000,"stock":24,"rating":4.7,"tags":["coffee","milk","ice"],"created_at":"2026-04-01T08:00:00Z"}
+{"index":{"_index":"products","_id":"2"}}
+{"name":"Bac xiu","category":"drink","price":32000,"stock":16,"rating":4.6,"tags":["coffee","sweet"],"created_at":"2026-04-01T08:15:00Z"}
+{"index":{"_index":"products","_id":"3"}}
+{"name":"Tra dao cam sa","category":"drink","price":35000,"stock":18,"rating":4.8,"tags":["tea","fruit"],"created_at":"2026-04-01T08:30:00Z"}
+{"index":{"_index":"products","_id":"4"}}
+{"name":"Matcha latte","category":"drink","price":42000,"stock":10,"rating":4.5,"tags":["matcha","milk"],"created_at":"2026-04-01T08:45:00Z"}
+{"index":{"_index":"products","_id":"5"}}
+{"name":"Cold brew","category":"drink","price":45000,"stock":12,"rating":4.9,"tags":["coffee","cold"],"created_at":"2026-04-01T09:00:00Z"}
+{"index":{"_index":"products","_id":"6"}}
+{"name":"Croissant bo","category":"food","price":28000,"stock":14,"rating":4.4,"tags":["bakery","butter"],"created_at":"2026-04-01T09:15:00Z"}
+{"index":{"_index":"products","_id":"7"}}
+{"name":"Tiramisu","category":"food","price":48000,"stock":7,"rating":4.8,"tags":["cake","dessert","coffee"],"created_at":"2026-04-01T09:30:00Z"}
+{"index":{"_index":"products","_id":"8"}}
+{"name":"Sandwich ga","category":"food","price":55000,"stock":9,"rating":4.3,"tags":["bread","chicken"],"created_at":"2026-04-01T09:45:00Z"}
+{"index":{"_index":"products","_id":"9"}}
+{"name":"Cheesecake dau","category":"food","price":52000,"stock":6,"rating":4.7,"tags":["cake","dessert","strawberry"],"created_at":"2026-04-01T10:00:00Z"}
+{"index":{"_index":"products","_id":"10"}}
+{"name":"Nuoc suoi","category":"drink","price":15000,"stock":30,"rating":4.1,"tags":["water"],"created_at":"2026-04-01T10:15:00Z"}
